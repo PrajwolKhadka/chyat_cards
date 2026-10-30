@@ -1,4 +1,4 @@
-import { GoogleProfile } from "./auth";
+import { GoogleProfile } from "./Auth";
 
 export type User = {
   id: string;

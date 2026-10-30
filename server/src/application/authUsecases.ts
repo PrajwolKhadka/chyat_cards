@@ -1,4 +1,4 @@
-import { GoogleVerifier, Session, TokenService } from "./ports/auth";
+import { GoogleVerifier, Session, TokenService } from "./ports/Auth";
 import { UserRepository } from "./ports/Persistance";
 
 export class AuthError extends Error {}
