@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+@theme {
+  --color-sindoor: #c8102e;
+  --color-marigold: #f4b400;
+  --color-terrace: #2e7d32;
+  --color-himal: #1565c0;
+  --color-ink: #2a0f14;
+  --color-paper: #fff6e5;
+  --color-dhaka: #7a1630;
+}
+
+@theme inline {
+  --font-sans: var(--font-mukta);
+  --font-display: var(--font-yatra);
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background-color: var(--color-paper);
+  background-image: radial-gradient(rgba(122, 22, 48, 0.07) 1px, transparent 1px);
+  background-size: 18px 18px;
+  color: var(--color-ink);
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes emote-pop {
+  0% {
+    transform: translateY(12px) scale(0.6);
+    opacity: 0;
+  }
+  15% {
+    transform: translateY(0) scale(1.1);
+    opacity: 1;
+  }
+  25% {
+    transform: scale(1);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-14px) scale(1);
+    opacity: 0;
+  }
+}
+.emote-pop {
+  animation: emote-pop 2.6s ease-out forwards;
+}
+
+@keyframes turn-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(244, 180, 0, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(244, 180, 0, 0);
+  }
+}
+.turn-pulse {
+  animation: turn-pulse 1.4s infinite;
+}
