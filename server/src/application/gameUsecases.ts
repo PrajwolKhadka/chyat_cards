@@ -11,30 +11,8 @@ import {
 } from "../domain/game";
 import { RoomError, normalizeCode, withGame, type Room } from "../domain/room";
 import type { Deps } from "./deps";
-import { MatchRepository } from "./ports/Persistance";
 
-export type GameDeps = Deps & { matches: MatchRepository };
-
-async function recordMatch(deps: GameDeps, room: Room): Promise<void> {
-  const game = room.game;
-  if (!game) return;
-  try {
-    await deps.matches.save({
-      roomCode: room.code,
-      finishedAt: deps.now(),
-      winnerId: game.winnerId ?? "",
-      players: game.players.map((p) => ({
-        playerId: p.id,
-        name: p.name,
-        isGuest: room.seats.find((s) => s.playerId === p.id)?.isGuest ?? true,
-        cardsLeft: p.hand.length,
-      })),
-    });
-  } catch (err) {
-    // A database problem must never break a finished game
-    console.error("could not save match", err);
-  }
-}
+export type GameDeps = Deps;
 
 async function apply(
   deps: GameDeps,
@@ -48,7 +26,6 @@ async function apply(
 
   const updated = withGame(room, change(room.game));
   await deps.rooms.save(updated);
-  if (updated.status === "finished") await recordMatch(deps, updated);
   return updated;
 }
 

@@ -5,13 +5,27 @@ import { readToken } from "../sessionCookie";
 import { AuthError } from "../../application/authUsecases";
 
 // Blocks cross site form posts and forged requests that try to reuse a logged in browser
-export function requireSameOrigin(clientUrl: string): RequestHandler {
+// export function requireSameOrigin(clientUrl: string): RequestHandler {
+//   return (req, res, next) => {
+//     if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") {
+//       next();
+//       return;
+//     }
+//     if (req.headers.origin !== clientUrl) {
+//       res.status(403).json({ error: "Bad origin" });
+//       return;
+//     }
+//     next();
+//   };
+// }
+export function requireSameOrigin(allowedOrigins: string[]): RequestHandler {
   return (req, res, next) => {
     if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") {
       next();
       return;
     }
-    if (req.headers.origin !== clientUrl) {
+    const origin = req.headers.origin;
+    if (!origin || !allowedOrigins.includes(origin)) {
       res.status(403).json({ error: "Bad origin" });
       return;
     }

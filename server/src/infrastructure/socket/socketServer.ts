@@ -43,7 +43,7 @@ const DISCONNECT_GRACE_MS = 5_000;
 export type SocketContext = {
   deps: GameDeps;
   tokens: TokenService;
-  clientUrl: string;
+  clientOrigins: string[];
 };
 
 type Ack = (
@@ -63,11 +63,11 @@ export function attachSocketServer(
   ctx: SocketContext,
 ): Server {
   const io = new Server(httpServer, {
-    cors: { origin: ctx.clientUrl, credentials: true },
+    cors: { origin: ctx.clientOrigins, credentials: true },
     maxHttpBufferSize: 10_000,
     allowRequest: (req, callback) => {
       const origin = req.headers.origin;
-      callback(null, !origin || origin === ctx.clientUrl);
+      callback(null, !origin || ctx.clientOrigins.includes(origin));
     },
   });
 
