@@ -1,7 +1,6 @@
 import type { ErrorRequestHandler, RequestHandler, Response } from "express";
 import { ZodError } from "zod";
 import type { Session, TokenService } from "../../application/ports/Auth";
-import { readToken } from "../sessionCookie";
 import { AuthError } from "../../application/authUsecases";
 
 // Blocks cross site form posts and forged requests that try to reuse a logged in browser
@@ -35,7 +34,8 @@ export function requireSameOrigin(allowedOrigins: string[]): RequestHandler {
 
 export function requireSession(tokens: TokenService): RequestHandler {
   return async (req, res, next) => {
-    const token = readToken(req.headers.cookie);
+    const header = req.headers.authorization ?? "";
+    const token = header.startsWith("Bearer ") ? header.slice(7) : "";
     if (!token) {
       res.status(401).json({ error: "Not signed in" });
       return;

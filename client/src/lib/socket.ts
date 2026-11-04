@@ -1,5 +1,5 @@
 import { io, type Socket } from "socket.io-client";
-import { API_URL } from "./api";
+import { API_URL, getToken } from "./api";
 
 let socket: Socket | null = null;
 let activeRoomCode: string | null = null;
@@ -33,15 +33,27 @@ export function disconnectSocket(): void {
 type Ack = { ok: true; code?: string } | { ok: false; error: string };
 
 // Sends an event and waits for the server's answer
-export function emitAck(event: string, payload?: unknown): Promise<{ code?: string }> {
+export function emitAck(
+  event: string,
+  payload?: unknown,
+): Promise<{ code?: string }> {
   return new Promise((resolve, reject) => {
-    const s = getSocket();
+    // The session token is read again on every connection attempt, so reconnects stay signed in
+    const s = io(API_URL, {
+      autoConnect: false,
+      auth: (send) => send({ token: getToken() }),
+    });
     if (!s.connected) s.connect();
 
-    s.timeout(8000).emit(event, payload ?? {}, (err: Error | null, res: Ack) => {
-      if (err) return reject(new Error("The server did not respond, try again"));
-      if (!res.ok) return reject(new Error(res.error));
-      resolve({ code: res.code });
-    });
+    s.timeout(8000).emit(
+      event,
+      payload ?? {},
+      (err: Error | null, res: Ack) => {
+        if (err)
+          return reject(new Error("The server did not respond, try again"));
+        if (!res.ok) return reject(new Error(res.error));
+        resolve({ code: res.code });
+      },
+    );
   });
 }

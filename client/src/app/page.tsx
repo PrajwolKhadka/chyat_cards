@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Shell from "@/components/ui/Shell";
-import { card, ghost, input, primary, secondary } from "@/components/ui/styles";
+import { input, primary, secondary } from "@/components/ui/styles";
 import { useAuth } from "@/features/auth/AuthProvider";
 import LoginCard from "@/features/auth/LoginCard";
 import { useActiveRoom } from "@/features/room/useActiveRoom";
+import { API_URL } from "@/lib/api";
 import { emitAck } from "@/lib/socket";
 
 function MenuCard() {
@@ -18,16 +19,6 @@ function MenuCard() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // async function run(task: () => Promise<void>) {
-  //   setBusy(true);
-  //   setError("");
-  //   try {
-  //     await task();
-  //   } catch (err) {
-  //     setError(err instanceof Error ? err.message : "Something went wrong");
-  //     setBusy(false);
-  //   }
-  // }
   async function run(task: () => Promise<void>) {
     setBusy(true);
     setError("");
@@ -39,6 +30,7 @@ function MenuCard() {
       setBusy(false);
     }
   }
+
   const create = () =>
     run(async () => {
       const res = await emitAck("room:create");
@@ -74,9 +66,7 @@ function MenuCard() {
           {user?.name}
         </p>
 
-        <p className="mt-1 text-xs text-ink/50">
-          {user?.isGuest ? "Guest player" : "Signed in with Google"}
-        </p>
+        <p className="mt-1 text-xs text-ink/50">Guest player</p>
       </div>
 
       {/* Active room */}
@@ -150,15 +140,6 @@ function MenuCard() {
 
       {/* Account actions */}
       <div className="mt-6 border-t border-dhaka/10 pt-4">
-        {user && !user.isGuest && (
-          <Link
-            href="/history"
-            className={`${ghost} flex min-h-11 items-center justify-center rounded-xl text-sm`}
-          >
-            My win history
-          </Link>
-        )}
-
         <button
           className="mt-2 w-full py-3 text-xs font-semibold tracking-wide text-ink/45 transition-colors hover:text-sindoor"
           onClick={() => void logout()}
@@ -172,6 +153,11 @@ function MenuCard() {
 
 export default function HomePage() {
   const { user, loading } = useAuth();
+
+  // A sleeping server takes a while to start, so wake it as soon as someone opens the site
+  useEffect(() => {
+    fetch(`${API_URL}/health`).catch(() => undefined);
+  }, []);
 
   return (
     <Shell>

@@ -1,4 +1,3 @@
-// export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 function resolveApiUrl(): string {
   const configured = process.env.NEXT_PUBLIC_API_URL;
   if (configured) return configured;
@@ -12,15 +11,24 @@ export const API_URL = resolveApiUrl();
 
 export type User = { id: string; name: string; isGuest: boolean };
 
-export type HistoryResponse = {
-  stats: { played: number; won: number };
-  matches: {
-    roomCode: string;
-    finishedAt: number;
-    won: boolean;
-    players: { name: string; isGuest: boolean; cardsLeft: number }[];
-  }[];
-};
+const TOKEN_KEY = "uno_token";
+
+export function getToken(): string | null {
+  try {
+    return window.localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null; // storage can be blocked, then the session lasts until the page is refreshed
+  }
+}
+
+function setToken(token: string | null): void {
+  try {
+    if (token) window.localStorage.setItem(TOKEN_KEY, token);
+    else window.localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // ignore, see getToken
+  }
+}
 
 export class ApiError extends Error {
   status: number;
@@ -32,11 +40,12 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    credentials: "include", // sends the session cookie
-    headers: init.body ? { "Content-Type": "application/json" } : undefined,
-  });
+  const headers: Record<string, string> = {};
+  if (init.body) headers["Content-Type"] = "application/json";
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${API_URL}${path}`, { ...init, headers });
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError(data.error ?? "Something went wrong", res.status);
@@ -44,35 +53,30 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 export async function getMe(): Promise<User | null> {
+  // No saved token means nobody is signed in, so there is no need to wake the server
+  if (!getToken()) return null;
+
   try {
     const data = await request<{ user: User }>("/auth/me");
     return data.user;
   } catch (err) {
-    if (err instanceof ApiError && err.status === 401) return null;
+    if (err instanceof ApiError && err.status === 401) {
+      setToken(null);
+      return null;
+    }
     throw err;
   }
 }
 
 export async function loginGuest(name: string): Promise<User> {
-  const data = await request<{ user: User }>("/auth/guest", {
+  const data = await request<{ token: string; user: User }>("/auth/guest", {
     method: "POST",
     body: JSON.stringify({ name }),
   });
-  return data.user;
-}
-
-export async function loginGoogle(credential: string): Promise<User> {
-  const data = await request<{ user: User }>("/auth/google", {
-    method: "POST",
-    body: JSON.stringify({ credential }),
-  });
+  setToken(data.token);
   return data.user;
 }
 
 export async function logout(): Promise<void> {
-  await request("/auth/logout", { method: "POST" });
-}
-
-export async function getHistory(): Promise<HistoryResponse> {
-  return request<HistoryResponse>("/me/history");
+  setToken(null);
 }

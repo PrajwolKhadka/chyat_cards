@@ -9,7 +9,7 @@ import { GameError } from "../../domain/game";
 import { RoomError, normalizeCode, type Room } from "../../domain/room";
 import { KeyedTimers } from "../../infrastructure/KeyedTimers";
 import { RateLimiter } from "../../infrastructure/RateLimiter";
-import { readToken } from "../sessionCookie";
+
 import { viewFor } from "./presenter";
 import {
   acceptDraw4Action,
@@ -44,6 +44,7 @@ export type SocketContext = {
   deps: GameDeps;
   tokens: TokenService;
   clientOrigins: string[];
+  trustProxy: boolean;
 };
 
 type Ack = (
@@ -63,7 +64,7 @@ export function attachSocketServer(
   ctx: SocketContext,
 ): Server {
   const io = new Server(httpServer, {
-    cors: { origin: ctx.clientOrigins, credentials: true },
+    cors: { origin: ctx.clientOrigins },
     maxHttpBufferSize: 10_000,
     allowRequest: (req, callback) => {
       const origin = req.headers.origin;
@@ -178,8 +179,9 @@ export function attachSocketServer(
 
   io.use(async (socket, next) => {
     try {
-      const token = readToken(socket.handshake.headers.cookie);
-      if (!token) return next(new Error("unauthorized"));
+      const token = socket.handshake.auth?.token;
+      if (typeof token !== "string" || !token)
+        return next(new Error("unauthorized"));
       socket.data.session = await ctx.tokens.verify(token);
       next();
     } catch {
@@ -196,7 +198,13 @@ export function attachSocketServer(
       name: session.name,
       isGuest: session.guest,
     };
-    const ip = socket.handshake.address;
+    // Behind the hosting proxy, the real visitor address is the last entry of x-forwarded-for
+    const forwarded = socket.handshake.headers["x-forwarded-for"];
+    const lastHop =
+      typeof forwarded === "string"
+        ? forwarded.split(",").pop()?.trim()
+        : undefined;
+    const ip = (ctx.trustProxy && lastHop) || socket.handshake.address;
 
     disconnectTimers.clear(session.sub);
 

@@ -33,18 +33,18 @@ async function main() {
   if (secure) app.set("trust proxy", 1);
 
   app.use(helmet());
-  app.use(cors({ origin: env.CLIENT_ORIGINS, credentials: true }));
+  app.use(cors({ origin: env.CLIENT_ORIGINS }));
   app.use(express.json({ limit: "2kb" }));
   app.use(requireSameOrigin(env.CLIENT_ORIGINS));
 
   app.get("/health", (_req, res) => {
     res.json({ ok: true });
   });
-  app.use("/auth", authRoutes({ auth, tokens, secure }));
+  app.use("/auth", authRoutes({ auth, tokens }));
   app.use(errorHandler);
 
   const server = http.createServer(app);
-  attachSocketServer(server, { deps, tokens, clientOrigins: env.CLIENT_ORIGINS });
+  attachSocketServer(server, { deps, tokens, clientOrigins: env.CLIENT_ORIGINS, trustProxy: secure });
 
   server.listen(env.PORT, "0.0.0.0", () => {
     console.log(`server running on port ${env.PORT}`);
